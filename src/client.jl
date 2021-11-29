@@ -4,8 +4,8 @@
 
 mutable struct Client
     id::Int64
-    Xtrain::Matrix{Float64}
-    Xtest::Matrix{Float64}
+    Xtrain::SparseMatrixCSC{Float64, Int64}
+    Xtest::SparseMatrixCSC{Float64, Int64}
     num_classes::Int64
     num_clients::Int64
     num_epoches::Int64
@@ -14,7 +14,7 @@ mutable struct Client
     W::Matrix{Float64}
     batch::Vector{Int64}
     grads::Matrix{Float64}
-    function Client(id::Int64, Xtrain::Matrix{Float64}, Xtest::Matrix{Float64}, config::Dict{String, Union{Int64, Float64}})
+    function Client(id::Int64, Xtrain::SparseMatrixCSC{Float64, Int64}, Xtest::SparseMatrixCSC{Float64, Int64}, config::Dict{String, Union{Int64, Float64}})
         num_classes = config["num_classes"]
         num_clients = config["num_clients"]
         num_epoches = config["num_epoches"]

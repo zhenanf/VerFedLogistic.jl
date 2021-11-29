@@ -30,7 +30,7 @@ for id = 1:config["num_clients"]
 end
 
 # training 
-vertical_lr_train(server, clients)
+@time vertical_lr_train(server, clients)
 
 # evaluation
 evaluation(server, clients)

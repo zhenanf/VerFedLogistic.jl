@@ -26,11 +26,11 @@ function generate_batches(num_data::Int64, num_batches::Int64)
 end
 
 # vertically split data
-function split_data(Xtrain, Xtest, num_clients)
+function split_data(Xtrain::SparseMatrixCSC{Float64, Int64}, Xtest::SparseMatrixCSC{Float64, Int64}, num_clients::Int64)
     num_features = size(Xtrain, 1)
     num_features_client = div(num_features, num_clients)
-    Xtrain_split = Vector{ Union{Missing, Matrix{Float64}} }(missing, num_clients)
-    Xtest_split = Vector{ Union{Missing, Matrix{Float64}} }(missing, num_clients)
+    Xtrain_split = Vector{ Union{Missing, SparseMatrixCSC{Float64, Int64}} }(missing, num_clients)
+    Xtest_split = Vector{ Union{Missing, SparseMatrixCSC{Float64, Int64}} }(missing, num_clients)
     t = 1
     for i = 1:num_clients
         if i < num_clients
@@ -51,9 +51,9 @@ function load_data(filename::String)
         fid = h5open("./data/MNISTdata.hdf5", "r")
         data = read(fid)
         close(fid)
-        Xtrain = convert(Matrix{Float64}, data["x_train"])
+        Xtrain = convert(Matrix{Float64}, data["x_train"]); Xtrain = sparse(Xtrain)
         Ytrain = convert(Matrix{Int64}, data["y_train"]); Ytrain = Ytrain[:]; Ytrain .+= 1
-        Xtest = convert(Matrix{Float64}, data["x_test"])
+        Xtest = convert(Matrix{Float64}, data["x_test"]); Xtest = sparse(Xtest)
         Ytest = convert(Matrix{Int64}, data["y_test"]); Ytest = Ytest[:]; Ytest .+= 1
         return Xtrain, Ytrain, Xtest, Ytest
     else
