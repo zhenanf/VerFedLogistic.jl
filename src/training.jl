@@ -14,12 +14,14 @@ function vertical_lr_train(server::Server, clients::Vector{Union{Missing, Client
             batch = batches[i]
             # server updates batch information
             update_batch(server, batch)
-            for c in clients
-                # client updates batch information
-                update_batch(c, batch)
-                # client compute and upload embeddings
-                send_embedding(c, server)
-            end
+            # for c in clients
+            #     # client updates batch information
+            #     update_batch(c, batch)
+            #     # client compute and upload embeddings
+            #     send_embedding(c, server)
+            # end
+            pmap(c->update_batch(c, batch), clients)
+            pmap(c->send_embedding(c, server), clients)
             # server compute the loss and the gradient
             batch_loss = compute_mini_batch_gradient(server)
             if i % 100 == 0

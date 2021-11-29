@@ -1,6 +1,7 @@
 ########################################################################
 # Vertical Federated Logistic Regression for MNIST
 ########################################################################
+
 # load data
 filename = "mnist"
 Xtrain, Ytrain, Xtest, Ytest = load_data(filename)
