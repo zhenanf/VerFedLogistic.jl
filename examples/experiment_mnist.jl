@@ -1,7 +1,7 @@
 ########################################################################
 # Vertical Federated Logistic Regression for MNIST
 ########################################################################
-
+using Printf
 # load data
 filename = "mnist"
 Xtrain, Ytrain, Xtest, Ytest = load_data(filename)
@@ -29,8 +29,11 @@ for id = 1:config["num_clients"]
     connect(server, c)
 end
 
-# training 
-@time vertical_lr_train(server, clients)
+# training
+startT = time()
+vertical_lr_train(server, clients)
+endT = time()
+@printf "training time: %.2f secs \n" endT - startT
 
 # evaluation
 evaluation(server, clients)

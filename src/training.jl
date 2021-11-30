@@ -7,14 +7,14 @@ function vertical_lr_train(server::Server, clients::Vector{Union{Missing, Client
     num_train_data = length(server.Ytrain)
     batch_size = server.batch_size
     num_batches = div(num_train_data, batch_size)
-    for epoch = 1:num_epoches
+    @inbounds for epoch = 1:num_epoches
         # generate mini-batches
         batches = generate_batches(num_train_data, num_batches)
-        for i = 1:num_batches
+        @inbounds for i = 1:num_batches
             batch = batches[i]
             # server updates batch information
             update_batch(server, batch)
-            for c in clients
+            Threads.@threads for c in clients
                 # client updates batch information
                 update_batch(c, batch)
                 # client compute and upload embeddings
@@ -27,7 +27,7 @@ function vertical_lr_train(server::Server, clients::Vector{Union{Missing, Client
             end
             # server and clients update model
             update_model(server)
-            for c in clients
+            Threads.@threads for c in clients
                 update_model(c)
             end
         end

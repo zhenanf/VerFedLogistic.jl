@@ -76,7 +76,7 @@ function compute_mini_batch_gradient(s::Server)
     loss = 0.0
     grads = zeros( num_classes, batch_size )
     # compute mini-batch gradient
-    for i = 1:batch_size
+    @inbounds for i = 1:batch_size
         y = s.Ytrain[ s.batch[i] ]
         emb = sum_embeddings[:, i] + s.b
         pred = softmax(emb)
@@ -87,7 +87,7 @@ function compute_mini_batch_gradient(s::Server)
     # update local gradient information 
     s.grads .= grads
     # send gradient information to clients
-    for c in s.clients
+    Threads.@threads for c in s.clients
         update_grads(c, grads)
     end
     # return mini-batch loss
