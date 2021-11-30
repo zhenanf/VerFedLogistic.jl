@@ -10,9 +10,9 @@ Xtrain, Ytrain, Xtest, Ytest = load_data(filename)
 config = Dict{String, Union{Int64, Float64}}()
 config["num_classes"] = 10
 config["num_clients"] = 10
-config["num_epoches"] = 15
-config["batch_size"] = 10
-config["learning_rate"] = 0.005
+config["num_epoches"] = 25
+config["batch_size"] = 600
+config["learning_rate"] = 0.1
 
 # vertically split data
 Xtrain_split, Xtest_split = split_data(Xtrain, Xtest, config["num_clients"])

@@ -10,6 +10,7 @@ using HDF5
 
 export Client
 export Server
+export Valuator
 export connect
 export update_batch
 export send_embedding, update_embedding
@@ -18,11 +19,13 @@ export eval
 export softmax, neg_log_loss
 export load_data, split_data, generate_batches
 export vertical_lr_train, evaluation
+export read_libsvm
 
 include("src/client.jl")
 include("src/server.jl")
 include("src/utils.jl")
 include("src/training.jl")
+include("src/valuator.jl")
 
 
 

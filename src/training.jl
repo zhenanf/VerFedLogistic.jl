@@ -22,7 +22,7 @@ function vertical_lr_train(server::Server, clients::Vector{Union{Missing, Client
             end
             # server compute the loss and the gradient
             batch_loss = compute_mini_batch_gradient(server)
-            if i % 100 == 0
+            if i % 10 == 0
                 @printf "Epoch %d, Batch %d, Loss %.2f\n" epoch i batch_loss
             end
             # server and clients update model

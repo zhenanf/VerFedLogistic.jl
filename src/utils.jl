@@ -60,3 +60,57 @@ function load_data(filename::String)
         @printf "Unsupported filename"
     end
 end
+
+# read data from libsvm
+function read_libsvm(filename::String)
+    numLine = 0
+    nnz = 0
+    open(filename, "r") do f
+        while !eof(f)
+            line = readline(f)
+            info = split(line, " ")
+            numLine += 1
+            nnz += ( length(info)-1 )
+            if line[end] == ' '
+                nnz -= 1
+            end
+        end
+    end
+    @printf("number of lines: %i\n", numLine)
+    n = numLine
+    m = 0
+    I = zeros(Int64, nnz)
+    J = zeros(Int64, nnz)
+    V = zeros(Float64, nnz)
+    y = zeros(Int64, n)
+    numLine = 0
+    cc = 1
+    open(filename, "r") do f
+        while !eof(f)
+            numLine += 1
+            line = readline(f)
+            info = split(line, " ")
+            y[numLine] = parse(Float64, info[1] )
+            ll = length(info)
+            if line[end] == ' '
+                ll -= 1
+            end
+            for i = 2:ll
+                idx, value = split(info[i], ":")
+                idx = parse(Int, idx)
+                value = parse(Float64, value)
+                I[cc] = numLine
+                J[cc] = idx
+                V[cc] = value
+                cc += 1
+                m = max(m, idx)
+            end
+        end
+    end
+    return sparse( I, J, V, n, m ), y
+end
+
+# matrix completion
+function complete_matrix(A::SparseMatrixCSC{Float64})
+    return 1
+end
