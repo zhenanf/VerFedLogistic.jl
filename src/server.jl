@@ -2,35 +2,35 @@
 # Server
 ########################################################################
 
-mutable struct Server 
-    Ytrain::Vector{Int64}
-    Ytest::Vector{Int64}
-    num_classes::Int64
-    num_clients::Int64
-    num_epoches::Int64
-    batch_size::Int64
-    learning_rate::Float64
-    clients::Vector{Union{Missing, Client}}
-    b::Vector{Float64}
-    embeddings::Array{Float64, 3}
-    train_embeddings::Array{Float64, 3}
-    test_embeddings::Array{Float64, 3}
-    batch::Vector{Int64}
-    grads::Matrix{Float64}
+mutable struct Server{T1<:Int64, T2<:Float64, T3<:Vector{Client}, T4<:Matrix{Float64}, T5<:Vector{Int64}, T6<:Array{Float64, 3}, T7<:Vector{Float64}} 
+    Ytrain::T5                       # training label
+    Ytest::T5                        # test label
+    num_classes::T1                  # number of classes
+    num_clients::T1                  # number of clients
+    num_epoches::T1                  # number of epoches
+    batch_size::T1                   # batch size
+    learning_rate::T2                # learning rate
+    clients::T3                      # set of clients
+    b::T7                            # server model
+    embeddings::T6                   # embeddings for batches
+    train_embeddings::T6             # embeddings for all training data (used for final evaluation)
+    test_embeddings::T6              # embeddings for all test data (used for final evaluation)
+    batch::T5                        # mini-batch
+    grads::T4                        # gradient information
     function Server(Ytrain::Vector{Int64}, Ytest::Vector{Int64}, config::Dict{String, Union{Int64, Float64}})
         num_classes = config["num_classes"]
         num_clients = config["num_clients"]
         num_epoches = config["num_epoches"]
         batch_size = config["batch_size"]
         learning_rate = config["learning_rate"]
-        clients = Vector{Union{Missing, Client}}(missing, num_clients)
-        b = rand(num_classes)
+        clients = Vector{Client}(undef, num_clients)
+        b = zeros(Float64, num_classes)
         embeddings = zeros(Float64, num_clients, num_classes, batch_size)
         train_embeddings = zeros(Float64, num_clients, num_classes, length(Ytrain))
         test_embeddings = zeros(Float64, num_clients, num_classes, length(Ytest))
         batch = zeros(Int64, batch_size)
         grads = zeros(Float64, num_classes, batch_size)
-        new(Ytrain, Ytest, num_classes, num_clients, num_epoches, batch_size, learning_rate, clients, b, embeddings, train_embeddings, test_embeddings, batch, grads)
+        new{Int64, Float64, Vector{Client}, Matrix{Float64}, Vector{Int64}, Array{Float64, 3}, Vector{Float64}}(Ytrain, Ytest, num_classes, num_clients, num_epoches, batch_size, learning_rate, clients, b, embeddings, train_embeddings, test_embeddings, batch, grads)
     end
 end
 
@@ -76,7 +76,7 @@ function compute_mini_batch_gradient(s::Server)
     loss = 0.0
     grads = zeros( num_classes, batch_size )
     # compute mini-batch gradient
-    Threads.@threads for i = 1:batch_size
+    for i = 1:batch_size
         y = s.Ytrain[ s.batch[i] ]
         emb = sum_embeddings[:, i] + s.b
         pred = softmax(emb)
@@ -87,7 +87,7 @@ function compute_mini_batch_gradient(s::Server)
     # update local gradient information 
     s.grads .= grads
     # send gradient information to clients
-    Threads.@threads for c in s.clients
+    for c in s.clients
         update_grads(c, grads)
     end
     # return mini-batch loss

@@ -29,8 +29,8 @@ end
 function split_data(Xtrain::SparseMatrixCSC{Float64, Int64}, Xtest::SparseMatrixCSC{Float64, Int64}, num_clients::Int64)
     num_features = size(Xtrain, 1)
     num_features_client = div(num_features, num_clients)
-    Xtrain_split = Vector{ Union{Missing, SparseMatrixCSC{Float64, Int64}} }(missing, num_clients)
-    Xtest_split = Vector{ Union{Missing, SparseMatrixCSC{Float64, Int64}} }(missing, num_clients)
+    Xtrain_split = Vector{ SparseMatrixCSC{Float64, Int64} }(undef, num_clients)
+    Xtest_split = Vector{ SparseMatrixCSC{Float64, Int64} }(undef, num_clients)
     t = 1
     for i = 1:num_clients
         if i < num_clients
@@ -48,13 +48,17 @@ end
 # load data 
 function load_data(filename::String)
     if filename == "mnist"
-        fid = h5open("./data/MNISTdata.hdf5", "r")
+        fid = h5open("./data/MNIST/MNISTdata.hdf5", "r")
         data = read(fid)
         close(fid)
         Xtrain = convert(Matrix{Float64}, data["x_train"]); Xtrain = sparse(Xtrain)
         Ytrain = convert(Matrix{Int64}, data["y_train"]); Ytrain = Ytrain[:]; Ytrain .+= 1
         Xtest = convert(Matrix{Float64}, data["x_test"]); Xtest = sparse(Xtest)
         Ytest = convert(Matrix{Int64}, data["y_test"]); Ytest = Ytest[:]; Ytest .+= 1
+        return Xtrain, Ytrain, Xtest, Ytest
+    elseif filename == "adult"
+        Xtrain, Ytrain = read_libsvm("./data/Adult/a8a"); Xtrain = Xtrain[1:end-1, :]
+        Xtest, Ytest = read_libsvm("./data/Adult/a8a.t")
         return Xtrain, Ytrain, Xtest, Ytest
     else
         @printf "Unsupported filename"
@@ -90,7 +94,11 @@ function read_libsvm(filename::String)
             numLine += 1
             line = readline(f)
             info = split(line, " ")
-            y[numLine] = parse(Float64, info[1] )
+            value = parse(Int64, info[1] )
+            if value < 0
+                value = Int64(2)
+            end
+            y[numLine] = value
             ll = length(info)
             if line[end] == ' '
                 ll -= 1
@@ -107,10 +115,19 @@ function read_libsvm(filename::String)
             end
         end
     end
-    return sparse( I, J, V, n, m ), y
+    return sparse( J, I, V, m, n ), y
 end
 
 # matrix completion
-function complete_matrix(A::SparseMatrixCSC{Float64})
-    return 1
+function complete_matrix(A::SparseMatrixCSC{Float64}, r::Int64)
+    I, J, ~ = findnz(A)
+    nnz = length(I)
+    obs = [(I[k], J[k]) for k = 1:nnz]
+    loss = QuadLoss()
+    reg = QuadReg(.1)
+    glrm = GLRM(A, loss, reg, reg, r, obs=obs)
+    X, Y, ch = fit!(glrm)
+    @printf "finish matrix completion"
+    return convert(typeof(Y), X'), Y
 end
+

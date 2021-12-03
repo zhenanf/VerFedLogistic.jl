@@ -6,6 +6,9 @@ using SparseArrays
 using Random
 using Distributed
 using HDF5
+using LowRankModels
+using JLD
+using Combinatorics
 
 
 export Client
@@ -20,12 +23,13 @@ export softmax, neg_log_loss
 export load_data, split_data, generate_batches
 export vertical_lr_train, evaluation
 export read_libsvm
+export complete_embedding_matrices, Uₜ, utility, compute_shapley_value
 
+include("src/utils.jl")
 include("src/client.jl")
 include("src/server.jl")
-include("src/utils.jl")
-include("src/training.jl")
 include("src/valuator.jl")
+include("src/training.jl")
 
 
 
