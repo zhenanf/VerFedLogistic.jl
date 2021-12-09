@@ -4,20 +4,21 @@ using LinearAlgebra
 using Printf
 using SparseArrays
 using Random
+using SharedArrays
 using Distributed
 using HDF5
 using LowRankModels
 using JLD
 using Combinatorics
+using StatsBase
 
-
-export Client
-export Server
-export Valuator
+export Client, AsynClient
+export Server, AsynServer
+export Valuator, AsynValuator
 export connect
 export update_batch
 export send_embedding, update_embedding
-export update_model, update_grads, compute_mini_batch_gradient
+export update_model, update_grads, compute_mini_batch_gradient, send_gradient
 export eval
 export softmax, neg_log_loss
 export load_data, split_data, generate_batches

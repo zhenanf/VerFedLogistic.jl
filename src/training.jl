@@ -1,5 +1,5 @@
 ########################################################################
-# Vertical Federated Logistic Regression
+# Synchronous Vertical Federated Logistic Regression
 ########################################################################
 
 function vertical_lr_train(server::Server, clients::Vector{Client}; valuator::Union{Missing, Valuator}=missing)
@@ -71,10 +71,85 @@ function evaluation(server::Server, clients::Vector{Client}; valuator::Union{Mis
     @printf "Train Loss %.2f, Train Accuracy %.2f, Test Loss %.2f, Test Accuracy %.2f\n" train_loss train_acc test_loss test_acc
     # data valuation (optional)
     if do_valuation
-        Factors = complete_embedding_matrices(valuator, Int64(3))
+        # Factors = complete_embedding_matrices(valuator, Int64(3))
         # save("./data/Adult/Factors.jld", "Factors", Factors)
-        # Factors = load("./data/Adult/Factors.jld", "Factors")
+        Factors = load("./data/Adult/Factors.jld", "Factors")
         shapley_values = compute_shapley_value(valuator, Factors, server.b);
-        @show shapley_values
+        for i = 1:length(clients)
+            @printf "valuation for client %i: %.3f\n" i shapley_values[i]
+        end
+    end
+end
+
+
+########################################################################
+# Asynchronous Vertical Federated Logistic Regression
+########################################################################
+
+function vertical_lr_train(server::AsynServer, clients::Vector{AsynClient}, time_limit::Float64; valuator::Union{Missing, AsynValuator}=missing)
+    tag = true
+    # whether to do data valuation
+    if ismissing(valuator)
+        do_valuation = false
+    else
+        do_valuation = true
+        Δt = valuator.Δt
+        num_rounds = Int(time_limit / Δt)
+    end
+    # set time limit
+    @async begin
+        if do_valuation
+            for t = 1:num_rounds
+                sleep(Δt)
+                send_embedding(server, valuator)
+            end
+            tag = false
+        else
+            sleep(time_limit)
+            tag = false
+        end
+    end
+    # start training
+    Threads.@threads for c in clients
+        while tag
+            # client compute and send embedding to server
+            batch = send_embedding(c, server)
+            # server compute and send back the gradient
+            send_gradient(server, c.id, batch)
+            # client update model
+            update_model(c, batch)
+            # time break
+            sleep(c.ts)
+        end
+    end
+    @printf "Finish training after %.2f seconds\n" time_limit
+    # print number of communication rounds
+    for c in clients
+        @printf "Client %i communicate %i times with server \n" c.id c.num_commu
+    end
+end
+
+function evaluation(server::AsynServer, clients::Vector{AsynClient}; valuator::Union{Missing, AsynValuator}=missing)
+    # whether to do data valuation
+    if ismissing(valuator)
+        do_valuation = false
+    else
+        do_valuation = true
+    end
+    # test and train accuracy
+    for c in clients
+        # client compute and upload training embeddings
+        send_embedding(c, server, tag = "training")
+        # client compute and upload test embeddings
+        send_embedding(c, server, tag = "test")
+    end
+    train_loss, train_acc, test_loss, test_acc = eval(server)
+    @printf "Train Loss %.2f, Train Accuracy %.2f, Test Loss %.2f, Test Accuracy %.2f\n" train_loss train_acc test_loss test_acc
+    # data valuation (optional)
+    if do_valuation
+        shapley_values = compute_shapley_value(valuator, server.b);
+        for i = 1:length(clients)
+            @printf "valuation for client %i: %.3f\n" i shapley_values[i]
+        end
     end
 end

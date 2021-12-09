@@ -24,6 +24,11 @@ m, n = size(Xtrain_split[end]); Xtrain_fake = sprand(m, n, 0.1)
 m, n = size(Xtest_split[end]); Xtest_fake = sprand(m, n, 0.1)
 push!(Xtrain_split, Xtrain_fake); push!(Xtest_split, Xtest_fake); config["num_clients"] += 1
 
+# create for an additional client with same feature as some client
+Xtrain_fake = Xtrain_split[1]
+Xtest_fake = Xtest_split[1]
+push!(Xtrain_split, Xtrain_fake); push!(Xtest_split, Xtest_fake); config["num_clients"] += 1
+
 # initialize server 
 server = Server(Ytrain, Ytest, config)
 
