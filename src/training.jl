@@ -2,7 +2,7 @@
 # Synchronous Vertical Federated Logistic Regression
 ########################################################################
 
-function vertical_lr_train(server::Server, clients::Vector{Client}; valuator::Union{Missing, Valuator}=missing)
+function vertical_lr_train(server::Server, clients::Vector{Client})
     # number of epoches
     num_epoches = server.num_epoches 
     # number of training data
@@ -11,12 +11,6 @@ function vertical_lr_train(server::Server, clients::Vector{Client}; valuator::Un
     batch_size = server.batch_size
     # number of batches
     num_batches = div(num_train_data, batch_size)
-    # whether to do data valuation
-    if ismissing(valuator)
-        do_valuation = false
-    else
-        do_valuation = true
-    end
     # round
     round = 1
     # start training
@@ -32,10 +26,6 @@ function vertical_lr_train(server::Server, clients::Vector{Client}; valuator::Un
                 update_batch(c, batch)
                 # client compute and upload embeddings
                 send_embedding(c, server)
-            end
-            # send embeddings to valuator (optional)
-            if do_valuation
-                send_embedding(server, valuator, round)
             end
             # server compute the loss and the gradient
             batch_loss = compute_mini_batch_gradient(server)
@@ -53,13 +43,7 @@ function vertical_lr_train(server::Server, clients::Vector{Client}; valuator::Un
     end
 end
 
-function evaluation(server::Server, clients::Vector{Client}; valuator::Union{Missing, Valuator}=missing)
-    # whether do data valuation
-    if ismissing(valuator)
-        do_valuation = false
-    else
-        do_valuation = true
-    end
+function evaluation(server::Server, clients::Vector{Client})
     # test and train accuracy
     for c in clients
         # client compute and upload training embeddings
@@ -69,16 +53,6 @@ function evaluation(server::Server, clients::Vector{Client}; valuator::Union{Mis
     end
     train_loss, train_acc, test_loss, test_acc = eval(server)
     @printf "Train Loss %.2f, Train Accuracy %.2f, Test Loss %.2f, Test Accuracy %.2f\n" train_loss train_acc test_loss test_acc
-    # data valuation (optional)
-    if do_valuation
-        # Factors = complete_embedding_matrices(valuator, Int64(3))
-        # save("./data/Adult/Factors.jld", "Factors", Factors)
-        Factors = load("./data/Adult/Factors.jld", "Factors")
-        shapley_values = compute_shapley_value(valuator, Factors, server.b);
-        for i = 1:length(clients)
-            @printf "valuation for client %i: %.3f\n" i shapley_values[i]
-        end
-    end
 end
 
 
@@ -86,28 +60,12 @@ end
 # Asynchronous Vertical Federated Logistic Regression
 ########################################################################
 
-function vertical_lr_train(server::AsynServer, clients::Vector{AsynClient}, time_limit::Float64; valuator::Union{Missing, AsynValuator}=missing)
+function vertical_lr_train(server::AsynServer, clients::Vector{AsynClient}, time_limit::Float64)
     tag = true
-    # whether to do data valuation
-    if ismissing(valuator)
-        do_valuation = false
-    else
-        do_valuation = true
-        Δt = valuator.Δt
-        num_rounds = Int(time_limit / Δt)
-    end
     # set time limit
     @async begin
-        if do_valuation
-            for t = 1:num_rounds
-                sleep(Δt)
-                send_embedding(server, valuator)
-            end
-            tag = false
-        else
-            sleep(time_limit)
-            tag = false
-        end
+        sleep(time_limit)
+        tag = false
     end
     # start training
     Threads.@threads for c in clients
@@ -129,13 +87,7 @@ function vertical_lr_train(server::AsynServer, clients::Vector{AsynClient}, time
     end
 end
 
-function evaluation(server::AsynServer, clients::Vector{AsynClient}; valuator::Union{Missing, AsynValuator}=missing)
-    # whether to do data valuation
-    if ismissing(valuator)
-        do_valuation = false
-    else
-        do_valuation = true
-    end
+function evaluation(server::AsynServer, clients::Vector{AsynClient})
     # test and train accuracy
     for c in clients
         # client compute and upload training embeddings
@@ -145,11 +97,4 @@ function evaluation(server::AsynServer, clients::Vector{AsynClient}; valuator::U
     end
     train_loss, train_acc, test_loss, test_acc = eval(server)
     @printf "Train Loss %.2f, Train Accuracy %.2f, Test Loss %.2f, Test Accuracy %.2f\n" train_loss train_acc test_loss test_acc
-    # data valuation (optional)
-    if do_valuation
-        shapley_values = compute_shapley_value(valuator, server.b);
-        for i = 1:length(clients)
-            @printf "valuation for client %i: %.3f\n" i shapley_values[i]
-        end
-    end
 end

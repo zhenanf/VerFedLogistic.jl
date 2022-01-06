@@ -47,16 +47,7 @@ end
 
 # load data 
 function load_data(filename::String)
-    if filename == "mnist"
-        fid = h5open("./data/MNIST/MNISTdata.hdf5", "r")
-        data = read(fid)
-        close(fid)
-        Xtrain = convert(Matrix{Float64}, data["x_train"]); Xtrain = sparse(Xtrain)
-        Ytrain = convert(Matrix{Int64}, data["y_train"]); Ytrain = Ytrain[:]; Ytrain .+= 1
-        Xtest = convert(Matrix{Float64}, data["x_test"]); Xtest = sparse(Xtest)
-        Ytest = convert(Matrix{Int64}, data["y_test"]); Ytest = Ytest[:]; Ytest .+= 1
-        return Xtrain, Ytrain, Xtest, Ytest
-    elseif filename == "adult"
+    if filename == "adult"
         Xtrain, Ytrain = read_libsvm("./data/Adult/a8a"); Xtrain = Xtrain[1:end-1, :]
         Xtest, Ytest = read_libsvm("./data/Adult/a8a.t")
         return Xtrain, Ytrain, Xtest, Ytest
@@ -118,16 +109,5 @@ function read_libsvm(filename::String)
     return sparse( J, I, V, m, n ), y
 end
 
-# matrix completion
-function complete_matrix(A::SparseMatrixCSC{Float64}, r::Int64)
-    I, J, ~ = findnz(A)
-    nnz = length(I)
-    obs = [(I[k], J[k]) for k = 1:nnz]
-    loss = QuadLoss()
-    reg = QuadReg(.1)
-    glrm = GLRM(A, loss, reg, reg, r, obs=obs)
-    X, Y, ch = fit!(glrm)
-    @printf "finish matrix completion"
-    return convert(typeof(Y), X'), Y
-end
+
 
