@@ -1,6 +1,7 @@
 ########################################################################
 # Asynchronous Vertical Federated Logistic Regression for Adult dataset
 ########################################################################
+using VerFedLogistic
 using Printf
 using SparseArrays
 
