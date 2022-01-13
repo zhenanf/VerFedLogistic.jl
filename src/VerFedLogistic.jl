@@ -8,6 +8,8 @@ using SharedArrays
 using Distributed
 using Combinatorics
 using StatsBase
+using Flux
+using Zygote
 
 export Client, AsynClient
 export Server, AsynServer

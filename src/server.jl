@@ -16,7 +16,7 @@ mutable struct Server{T1<:Int64, T2<:Float64, T3<:Vector{T2}, T4<:Vector{T1}, T5
     test_embeddings::T6              # embeddings for all test data (used for final evaluation)
     batch::T4                        # mini-batch
     grads::T5                        # gradient information
-    function Server(Ytrain::Vector{Int64}, Ytest::Vector{Int64}, config::Dict{String, Union{Int64, Float64}})
+    function Server(Ytrain::Vector{Int64}, Ytest::Vector{Int64}, config::Dict{String, Union{Int64, Float64, String}})
         num_classes = config["num_classes"]
         num_clients = config["num_clients"]
         num_epoches = config["num_epoches"]
@@ -47,11 +47,23 @@ end
 function send_embedding(c::Client, s::Server; tag = "batch")
     if tag == "batch"
         Xbatch = c.Xtrain[:, c.batch]
-        embedding = c.W * Xbatch
+        if typeof(c.W) <: Matrix{Float64}
+            embedding = c.W * Xbatch
+        else
+            embedding, c.back = Zygote.pullback(()->c.W(Xbatch), params(c.W))
+        end
     elseif tag == "training"
-        embedding = c.W * c.Xtrain
+        if typeof(c.W) <: Matrix{Float64}
+            embedding = c.W * c.Xtrain
+        else
+            embedding = c.W(c.Xtrain)
+        end
     else
-        embedding = c.W * c.Xtest
+        if typeof(c.W) <: Matrix{Float64}
+            embedding = c.W * c.Xtest
+        else
+            embedding = c.W(c.Xtest)
+        end
     end
     update_embedding(s, c.id, embedding, tag=tag)
 end
@@ -114,7 +126,7 @@ mutable struct AsynServer{T1<:Int64, T2<:Float64, T3<:Vector{T2}, T4<:Vector{T1}
     embeddings::T5                   # latest embeddings
     train_embeddings::T5             # embeddings for all training data (used for final evaluation)
     test_embeddings::T5              # embeddings for all test data (used for final evaluation)
-    function AsynServer(Ytrain::Vector{Int64}, Ytest::Vector{Int64}, config::Dict{String, Union{Int64, Float64}})
+    function AsynServer(Ytrain::Vector{Int64}, Ytest::Vector{Int64}, config::Dict{String, Union{Int64, Float64, String}})
         num_classes = config["num_classes"]
         num_clients = config["num_clients"]
         learning_rate = config["learning_rate"]
@@ -142,15 +154,27 @@ function send_embedding(c::AsynClient, s::AsynServer; tag = "batch")
             batch = sample(collect(1:num_data), c.batch_size, replace=false)
         end
         Xbatch = c.Xtrain[:, batch]
-        embedding = c.W * Xbatch
+        if typeof(c.W) <: Matrix{Float64}
+            embedding = c.W * Xbatch
+        else
+            embedding, c.back = Zygote.pullback(()->c.W(Xbatch), params(c.W))
+        end
         update_embedding(s, c.id, embedding, batch)
         @printf "Client %i finish uploading embedding \n" c.id
         return batch
     elseif tag == "training"
-        embedding = c.W * c.Xtrain
+        if typeof(c.W) <: Matrix{Float64}
+            embedding = c.W * c.Xtrain
+        else
+            embedding = c.W(c.Xtrain)
+        end
         s.train_embeddings[c.id,:,:] .= embedding
     else
-        embedding = c.W * c.Xtest
+        if typeof(c.W) <: Matrix{Float64}
+            embedding = c.W * c.Xtest
+        else
+            embedding = c.W(c.Xtest)
+        end
         s.test_embeddings[c.id,:,:] .= embedding
     end
 end

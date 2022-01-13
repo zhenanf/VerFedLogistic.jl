@@ -10,12 +10,13 @@ filename = "adult"
 Xtrain, Ytrain, Xtest, Ytest = load_data(filename)
 
 # config
-config = Dict{String, Union{Int64, Float64}}()
+config = Dict{String, Union{Int64, Float64, String}}()
 config["num_classes"] = 2
 config["num_clients"] = 3
 config["batch_size"] = 2837
-config["learning_rate"] = 0.05
+config["learning_rate"] = 0.5
 config["time_limit"] = 5.0
+config["local_model"] = "mlp"
 
 
 # vertically split data
